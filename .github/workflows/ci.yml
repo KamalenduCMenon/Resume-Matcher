@@ -47,7 +47,8 @@ jobs:
 
       - name: Check for vulnerable dependencies
         run: |
-          safety check -r requirements.txt
+          pip install pip-audit
+          pip-audit -r requirements.txt
         continue-on-error: true
         # continue-on-error lets the pipeline finish even if
         # a dependency advisory is found, but still reports it
