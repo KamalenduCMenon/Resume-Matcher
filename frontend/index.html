@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Resume Matcher</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 8px;
+      color: #2d3748;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #718096;
+      margin-bottom: 40px;
+      font-size: 0.95rem;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 28px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      margin-bottom: 24px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #4a5568;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    textarea {
+      width: 100%;
+      height: 220px;
+      padding: 12px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      resize: vertical;
+      transition: border-color 0.2s;
+      font-family: inherit;
+      line-height: 1.6;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      margin-top: 20px;
+    }
+
+    .btn:hover { opacity: 0.92; transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    .results { display: none; }
+
+    .score-block {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .score-circle {
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      flex-shrink: 0;
+      border: 4px solid;
+    }
+
+    .score-circle .pct {
+      font-size: 1.6rem;
+      line-height: 1;
+    }
+
+    .score-circle .band {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-top: 4px;
+      text-align: center;
+      padding: 0 6px;
+    }
+
+    .strong  { border-color: #38a169; color: #38a169; background: #f0fff4; }
+    .moderate{ border-color: #d69e2e; color: #d69e2e; background: #fffff0; }
+    .weak    { border-color: #dd6b20; color: #dd6b20; background: #fffaf0; }
+    .poor    { border-color: #e53e3e; color: #e53e3e; background: #fff5f5; }
+
+    .score-detail { flex: 1; }
+    .score-detail h2 { font-size: 1.4rem; margin-bottom: 6px; }
+    .score-detail p  { color: #718096; font-size: 0.9rem; }
+
+    .keywords-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 4px;
+    }
+
+    .kw-section h3 {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+    }
+
+    .kw-section.missing h3 { color: #e53e3e; }
+    .kw-section.present h3 { color: #38a169; }
+
+    .tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      margin: 3px;
+    }
+
+    .tag.missing { background: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
+    .tag.present { background: #f0fff4; color: #276749; border: 1px solid #c6f6d5; }
+
+    .coverage {
+      font-size: 0.85rem;
+      color: #718096;
+      margin-top: 12px;
+    }
+
+    .privacy {
+      font-size: 0.78rem;
+      color: #a0aec0;
+      text-align: center;
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .error-msg {
+      background: #fff5f5;
+      border: 1px solid #fed7d7;
+      color: #c53030;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    .spinner {
+      display: none;
+      text-align: center;
+      padding: 20px;
+      color: #667eea;
+      font-weight: 600;
+    }
+
+    @media (max-width: 600px) {
+      .grid, .keywords-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🎯 Resume Matcher</h1>
+  <p class="subtitle">Paste your resume and a job description to see how well they match</p>
+
+  <div class="card">
+    <div class="grid">
+      <div>
+        <label>Your Resume</label>
+        <textarea id="resume" placeholder="Paste your resume text here..."></textarea>
+      </div>
+      <div>
+        <label>Job Description</label>
+        <textarea id="jd" placeholder="Paste the job description here..."></textarea>
+      </div>
+    </div>
+
+    <div class="error-msg" id="error"></div>
+    <button class="btn" id="matchBtn" onclick="runMatch()">Analyze Match</button>
+  </div>
+
+  <div class="spinner" id="spinner">⏳ Analyzing your resume...</div>
+
+  <div class="card results" id="results">
+
+    <div class="score-block">
+      <div class="score-circle" id="scoreCircle">
+        <span class="pct" id="scorePct">--</span>
+        <span class="band" id="scoreBand">--</span>
+      </div>
+      <div class="score-detail">
+        <h2 id="scoreLabel">Match Result</h2>
+        <p id="scoreDesc">--</p>
+      </div>
+    </div>
+
+    <hr style="margin: 24px 0; border-color: #e2e8f0;">
+
+    <div class="keywords-grid">
+      <div class="kw-section missing">
+        <h3>❌ Missing Keywords</h3>
+        <div id="missingTags"></div>
+      </div>
+      <div class="kw-section present">
+        <h3>✅ Present Keywords</h3>
+        <div id="presentTags"></div>
+      </div>
+    </div>
+
+    <p class="coverage" id="coverage"></p>
+
+    <p class="privacy" id="privacyNote"></p>
+  </div>
+</div>
+
+<script>
+  async function runMatch() {
+    const resume = document.getElementById('resume').value.trim()
+    const jd = document.getElementById('jd').value.trim()
+    const errorEl = document.getElementById('error')
+    const btn = document.getElementById('matchBtn')
+
+    errorEl.style.display = 'none'
+
+    if (!resume) { showError('Please paste your resume text.'); return }
+    if (!jd)     { showError('Please paste the job description.'); return }
+
+    btn.disabled = true
+    btn.textContent = 'Analyzing...'
+    document.getElementById('spinner').style.display = 'block'
+    document.getElementById('results').style.display = 'none'
+
+    try {
+      const res = await fetch('http://127.0.0.1:8000/match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resume, job_description: jd })
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        showError(data.detail || 'Something went wrong. Please try again.')
+        return
+      }
+
+      renderResults(data)
+
+    } catch (err) {
+      showError('Could not connect to the API. Make sure the server is running on port 8000.')
+    } finally {
+      btn.disabled = false
+      btn.textContent = 'Analyze Match'
+      document.getElementById('spinner').style.display = 'none'
+    }
+  }
+
+  function renderResults(data) {
+    const { match, keywords, privacy_note } = data
+    const score = match.score
+    const pct = match.percentage
+    const band = match.band
+
+    // Score circle
+    document.getElementById('scorePct').textContent = pct
+    document.getElementById('scoreBand').textContent = band
+
+    const circle = document.getElementById('scoreCircle')
+    circle.className = 'score-circle'
+    if (score >= 0.80)      { circle.classList.add('strong') }
+    else if (score >= 0.60) { circle.classList.add('moderate') }
+    else if (score >= 0.40) { circle.classList.add('weak') }
+    else                    { circle.classList.add('poor') }
+
+    // Label and description
+    document.getElementById('scoreLabel').textContent = band
+    const descs = {
+      'Strong Match':   'Your resume aligns well with this role. Apply with confidence.',
+      'Moderate Match': 'Good foundation. Add the missing keywords to strengthen your application.',
+      'Weak Match':     'Some overlap but significant gaps. Consider tailoring your resume.',
+      'Poor Match':     'Limited alignment. Review the missing keywords and update your resume.'
+    }
+    document.getElementById('scoreDesc').textContent = descs[band] || ''
+
+    // Keywords
+    const missingEl = document.getElementById('missingTags')
+    const presentEl = document.getElementById('presentTags')
+    missingEl.innerHTML = ''
+    presentEl.innerHTML = ''
+
+    if (keywords.missing_keywords.length === 0) {
+      missingEl.innerHTML = '<span style="color:#718096;font-size:0.85rem">None — great coverage!</span>'
+    } else {
+      keywords.missing_keywords.forEach(kw => {
+        missingEl.innerHTML += `<span class="tag missing">${kw}</span>`
+      })
+    }
+
+    keywords.present_keywords.forEach(kw => {
+      presentEl.innerHTML += `<span class="tag present">${kw}</span>`
+    })
+
+    document.getElementById('coverage').textContent =
+      `Keyword coverage: ${keywords.coverage_score} of job description terms found in your resume`
+
+    document.getElementById('privacyNote').innerHTML =
+      `🔒 ${privacy_note}`
+
+    document.getElementById('results').style.display = 'block'
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('error')
+    el.textContent = msg
+    el.style.display = 'block'
+  }
+</script>
+</body>
+</html>
